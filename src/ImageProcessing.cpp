@@ -4,6 +4,10 @@
 
 #include <QDebug>
 
+int upto(int x, int y) {
+	return (x + y - 1) & ~(y - 1);
+}
+
 void imageProcessingFun(const QString& progName, QImage* const outImgs, const QImage* const inImgs, const QVector<double>& params) 
 {
 	int X_SIZE = inImgs->width();
@@ -17,11 +21,14 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 		/* Vertical scale factor is params[0] */
 		/* Horizontal scale factor is params[1] */
 
-		/* TO DO: Calculate output image resolution and construct output image object */
+		/* Create empty output image */
 
-		/* TO DO: Perform Sample and hold interpolation  */
+		int NEW_X_SIZE = upto(X_SIZE * params[1], 4);
+		int NEW_Y_SIZE = upto(X_SIZE * params[0], 4);
 
+		*outImgs = *(new QImage(NEW_X_SIZE, NEW_Y_SIZE, inImgs->format()));
 
+		sampleAndHold(inImgs->bits(),X_SIZE,Y_SIZE,outImgs->bits(),NEW_X_SIZE,NEW_Y_SIZE);
 	}
 	else if (progName == "Bilinear") 
 	{
@@ -29,9 +36,14 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 		/* Vertical scale factor is params[0] */
 		/* Horizontal scale factor is params[1] */
 
-		/* TO DO: Calculate output image resolution and construct output image object */
+		/* Create empty output image */
 
-		/* TO DO: Perform Bilinear interpolation  */
+		int NEW_X_SIZE = upto(X_SIZE * params[1], 4);
+		int NEW_Y_SIZE = upto(X_SIZE * params[0], 4);
+
+		*outImgs = *(new QImage(NEW_X_SIZE, NEW_Y_SIZE, inImgs->format()));
+
+		bilinearInterpolate(inImgs->bits(), X_SIZE, Y_SIZE, outImgs->bits(), NEW_X_SIZE, NEW_Y_SIZE);
 	}
 	else if (progName == "Bicubic")
 	{
@@ -39,9 +51,12 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 		/* Vertical scale factor is params[0] */
 		/* Horizontal scale factor is params[1] */
 
-		/* TO DO: Calculate output image resolution and construct output image object */
+		int NEW_X_SIZE = upto(X_SIZE * params[1], 4);
+		int NEW_Y_SIZE = upto(X_SIZE * params[0], 4);
 
-		/* TO DO: Perform Bicubic interpolation  */
+		*outImgs = *(new QImage(NEW_X_SIZE, NEW_Y_SIZE, inImgs->format()));
+
+		bicubicInterpolate(inImgs->bits(), X_SIZE, Y_SIZE, outImgs->bits(), NEW_X_SIZE, NEW_Y_SIZE);
 
 	}
 	else if(progName == "Rotation") 
