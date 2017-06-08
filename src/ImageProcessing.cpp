@@ -65,9 +65,12 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 		/* Rotation angle in degrees is params[0]*/
 		/* Center of rotation coordinates are (XSIZE/2, YSIZE/2) */
 
-		/* TO DO: Construct output image object */
+		int m = X_SIZE/2;
+		int n = Y_SIZE/2;
 
-		/* TO DO: Perform image rotation */
+		*outImgs = *(new QImage(X_SIZE, Y_SIZE, inImgs->format()));
+
+		imageRotate(inImgs->bits(), X_SIZE, Y_SIZE, outImgs->bits(),m,n,params[0]);
 	
 	}
 	else if (progName == "Rotation Bilinear") 
@@ -76,9 +79,12 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 		/* Rotation angle in degrees is params[0]*/
 		/* Center of rotation coordinates are (XSIZE/2, YSIZE/2) */
 
-		/* TO DO: Construct output image object */
+		int m = X_SIZE / 2;
+		int n = Y_SIZE / 2;
 
-		/* TO DO: Perform image rotation with bilinear interpolation */
+		*outImgs = *(new QImage(X_SIZE, Y_SIZE, inImgs->format()));
+
+		imageRotateBilinear(inImgs->bits(), X_SIZE, Y_SIZE, outImgs->bits(), m, n, params[0]);
 	}
 
 }

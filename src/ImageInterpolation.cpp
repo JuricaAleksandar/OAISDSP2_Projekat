@@ -2,6 +2,7 @@
 #include "ColorSpaces.h"
 #include <math.h>
 
+#define PI 3.14159265
 
 void sampleAndHold(const uchar input[], int xSize, int ySize, uchar output[], int newXSize, int newYSize)
 {
@@ -144,8 +145,6 @@ void bilinearInterpolate(const uchar input[], int xSize, int ySize, uchar output
 	delete[] NEW_V_buff;
 }
 
-
-
 double weight(double d)
 {
 	if (abs(d) < 1)
@@ -203,10 +202,14 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 			int jj = j / hScalingFactor;
 
 			uchar cubicIntRes[4];
-			cubicIntRes[0] = cubicInterpolateUchar(Y_buff+(ii-1)*xSize + jj - 1, dHorizontal);
-			cubicIntRes[1] = cubicInterpolateUchar(Y_buff+ii*xSize + jj - 1, dHorizontal);
-			cubicIntRes[2] = cubicInterpolateUchar(Y_buff+(ii+1)*xSize + jj - 1, dHorizontal);
-			cubicIntRes[3] = cubicInterpolateUchar(Y_buff+(ii+2)*xSize + jj - 1, dHorizontal);
+			for (int m = 0; m < 4; m++)
+			{
+				int dif;
+				if(dif = ii - 1 + m - ySize > 0)
+					cubicIntRes[m] = cubicInterpolateUchar(Y_buff + (ii - 1 + m - dif)*xSize + jj - 1, dHorizontal);
+				else
+					cubicIntRes[m] = cubicInterpolateUchar(Y_buff + (ii - 1 + m)*xSize + jj - 1, dHorizontal);
+			}
 
 			NEW_Y_buff[i*newXSize + j] = cubicInterpolateUchar(cubicIntRes, dVertical);
 		}
@@ -222,17 +225,25 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 
 			char cubicIntRes[4];
 
-			cubicIntRes[0] = cubicInterpolateChar(U_buff + (ii - 1)*xSize/2 + jj - 1, dHorizontal);
-			cubicIntRes[1] = cubicInterpolateChar(U_buff + ii*xSize/2 + jj - 1, dHorizontal);
-			cubicIntRes[2] = cubicInterpolateChar(U_buff + (ii + 1)*xSize/2 + jj - 1, dHorizontal);
-			cubicIntRes[3] = cubicInterpolateChar(U_buff + (ii + 2)*xSize/2 + jj - 1, dHorizontal);
+			for (int m = 0; m < 4; m++)
+			{
+				int dif;
+				if (dif = ii - 1 + m - ySize/2 > 0)
+					cubicIntRes[m] = cubicInterpolateChar(U_buff + (ii - 1 + m - dif)*xSize/2 + jj - 1, dHorizontal);
+				else
+					cubicIntRes[m] = cubicInterpolateChar(U_buff + (ii - 1 + m)*xSize/2 + jj - 1, dHorizontal);
+			}
 
-			NEW_U_buff[i*newXSize/2 + j] = cubicInterpolateChar(cubicIntRes, dVertical);
+			NEW_U_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntRes, dVertical);
 
-			cubicIntRes[0] = cubicInterpolateChar(V_buff + (ii - 1)*xSize / 2 + jj - 1, dHorizontal);
-			cubicIntRes[1] = cubicInterpolateChar(V_buff + ii*xSize / 2 + jj - 1, dHorizontal);
-			cubicIntRes[2] = cubicInterpolateChar(V_buff + (ii + 1)*xSize / 2 + jj - 1, dHorizontal);
-			cubicIntRes[3] = cubicInterpolateChar(V_buff + (ii + 2)*xSize / 2 + jj - 1, dHorizontal);
+			for (int m = 0; m < 4; m++)
+			{
+				int dif;
+				if (dif = ii - 1 + m - ySize / 2 > 0)
+					cubicIntRes[m] = cubicInterpolateChar(V_buff + (ii - 1 + m - dif)*xSize / 2 + jj - 1, dHorizontal);
+				else
+					cubicIntRes[m] = cubicInterpolateChar(V_buff + (ii - 1 + m)*xSize / 2 + jj - 1, dHorizontal);
+			}
 
 			NEW_V_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntRes, dVertical);
 		}
@@ -251,7 +262,59 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 
 void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int m, int n, double angle)
 {
-	/* TO DO */
+	/* Create buffers for YUV image */
+	uchar* Y_buff = new uchar[xSize*ySize];
+	char* U_buff = new char[xSize*ySize / 4];
+	char* V_buff = new char[xSize*ySize / 4];
+
+	uchar* NEW_Y_buff = new uchar[xSize*ySize];
+	char* NEW_U_buff = new char[xSize*ySize / 4];
+	char* NEW_V_buff = new char[xSize*ySize / 4];
+
+	/* Convert input image to YUV420 image */
+	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
+
+	for (int i = 0; i < ySize; i++)
+		for (int j = 0; j < xSize; j++)
+		{
+			int ii = i*cos(PI*angle/180) + j*sin(PI*angle/180) - m*sin(PI*angle/180) - n*cos(PI*angle/180) + n;
+			int jj = j*cos(PI*angle/180) - i*sin(PI*angle/180) - m*cos(PI*angle/180) + n*sin(PI*angle/180) + m;
+
+			if (ii < 0 || ii > ySize || jj < 0 || jj > xSize)
+				NEW_Y_buff[i*xSize + j] = 0;
+			else
+				NEW_Y_buff[i*xSize + j] = Y_buff[ii*xSize + jj];
+		}
+
+	for (int i = 0; i < ySize/2; i++)
+		for (int j = 0; j < xSize/2; j++)
+		{
+			int ii = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180)/2 - n*cos(PI*angle / 180)/2 + n/2;
+			int jj = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180)/2 + n*sin(PI*angle / 180)/2 + m/2;
+
+			if (ii < 0 || ii > ySize / 2 || jj < 0 || jj > xSize / 2)
+			{
+				NEW_U_buff[i*xSize / 2 + j] = 0;
+				NEW_V_buff[i*xSize / 2 + j] = 0;
+			}
+			else
+			{
+				NEW_U_buff[i*xSize / 2 + j] = U_buff[ii*xSize / 2 + jj];
+				NEW_V_buff[i*xSize / 2 + j] = V_buff[ii*xSize / 2 + jj];
+			}
+		}
+
+	/* Convert YUV image back to RGB */
+	YUV420toRGB(NEW_Y_buff, NEW_U_buff, NEW_V_buff, xSize, ySize, output);
+
+	/* Delete used memory buffers */
+	delete[] Y_buff;
+	delete[] U_buff;
+	delete[] V_buff;
+
+	delete[] NEW_Y_buff;
+	delete[] NEW_U_buff;
+	delete[] NEW_V_buff;
 }
 
 void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output[], int m, int n, double angle)

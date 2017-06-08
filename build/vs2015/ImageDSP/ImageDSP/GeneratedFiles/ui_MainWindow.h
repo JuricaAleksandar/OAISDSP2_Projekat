@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'MainWindow.ui'
 **
-** Created by: Qt User Interface Compiler version 5.8.0
+** Created by: Qt User Interface Compiler version 5.9.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -265,19 +265,33 @@ public:
     {
         mainWindow->setWindowTitle(QApplication::translate("mainWindow", "Image DSP", Q_NULLPTR));
         actionNew->setText(QApplication::translate("mainWindow", "&New", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionNew->setShortcut(QApplication::translate("mainWindow", "Ctrl+N", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionOpen->setText(QApplication::translate("mainWindow", "&Open", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionOpen->setShortcut(QApplication::translate("mainWindow", "Ctrl+O", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionSave->setText(QApplication::translate("mainWindow", "&Save", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionSave->setShortcut(QApplication::translate("mainWindow", "Ctrl+S", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionSaveAs->setText(QApplication::translate("mainWindow", "Save &As", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionSaveAs->setShortcut(QApplication::translate("mainWindow", "Ctrl+Shift+S", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionQuit->setText(QApplication::translate("mainWindow", "&Quit", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionQuit->setShortcut(QApplication::translate("mainWindow", "Ctrl+Q", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionImportGeometry->setText(QApplication::translate("mainWindow", "&Geometry", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionImportGeometry->setShortcut(QApplication::translate("mainWindow", "Ctrl+G", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionImportTexture->setText(QApplication::translate("mainWindow", "&Texture", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionImportTexture->setShortcut(QApplication::translate("mainWindow", "Ctrl+T", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionExportGeometry->setText(QApplication::translate("mainWindow", "&Geometry", Q_NULLPTR));
         actionExportTexture->setText(QApplication::translate("mainWindow", "&Texture", Q_NULLPTR));
         actionTextureName->setText(QApplication::translate("mainWindow", "Texture Name", Q_NULLPTR));
@@ -286,7 +300,9 @@ public:
         actionResetModelCamera->setText(QApplication::translate("mainWindow", "Reset &Model Camera", Q_NULLPTR));
         actionResetUVCamera->setText(QApplication::translate("mainWindow", "Reset &UV Camera", Q_NULLPTR));
         actionResetAllCameras->setText(QApplication::translate("mainWindow", "Reset &All Cameras", Q_NULLPTR));
+#ifndef QT_NO_SHORTCUT
         actionResetAllCameras->setShortcut(QApplication::translate("mainWindow", "Ctrl+R", Q_NULLPTR));
+#endif // QT_NO_SHORTCUT
         actionLanguage->setText(QApplication::translate("mainWindow", "&Language", Q_NULLPTR));
         actionTextureItemAlwaysEditor->setText(QApplication::translate("mainWindow", "Texture Item Always Editor", Q_NULLPTR));
         inputImgViewDock->setWindowTitle(QApplication::translate("mainWindow", "Input Image", Q_NULLPTR));
