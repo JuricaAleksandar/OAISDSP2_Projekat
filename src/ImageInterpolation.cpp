@@ -2,7 +2,7 @@
 #include "ColorSpaces.h"
 #include <math.h>
 
-#define PI 3.14159265
+#define PI 3.14159265358979323846
 
 void sampleAndHold(const uchar input[], int xSize, int ySize, uchar output[], int newXSize, int newYSize)
 {
@@ -91,10 +91,10 @@ void bilinearInterpolate(const uchar input[], int xSize, int ySize, uchar output
 			int ii = floor((i - 1) / vScalingFactor);
 			int jj = floor((j - 1) / hScalingFactor);
 
-			if (ii < ySize - 1)
+			if (ii < ySize - 1 && b == 0)
 				ii++;
 
-			if (jj < xSize - 1)
+			if (jj < xSize - 1 && a == 0)
 				jj++;
 
 			int iii = ii;
@@ -106,17 +106,10 @@ void bilinearInterpolate(const uchar input[], int xSize, int ySize, uchar output
 			if (jjj < xSize - 1)
 				jjj++;
 
-			uchar gorelevo = Y_buff[ii*xSize + jj];
-			uchar goredesno = Y_buff[ii*xSize + jjj];
-			uchar dolelevo = Y_buff[iii*xSize + jj];
-			uchar doledesno = Y_buff[iii*xSize + jjj];
-
 			NEW_Y_buff[i*newXSize + j] = (1 - a)*(1 - b)*Y_buff[ii*xSize + jj] +
 				(1 - a)*b*Y_buff[iii*xSize + jj] +
 				a*(1 - b)*Y_buff[ii*xSize + jjj] +
 				a*b*Y_buff[iii*xSize + jjj];
-
-			uchar novi = NEW_Y_buff[i*newXSize + j];
 		}
 
 	for (int i = 0; i < newYSize / 2; i++)
@@ -127,10 +120,10 @@ void bilinearInterpolate(const uchar input[], int xSize, int ySize, uchar output
 			int ii = floor((i - 1) / vScalingFactor);
 			int jj = floor((j - 1) / hScalingFactor);
 
-			if (ii < ySize/2 - 1)
+			if (ii < ySize/2 - 1 && b == 0)
 				ii++;
 
-			if (jj < xSize/2 - 1)
+			if (jj < xSize/2 - 1 && a == 0)
 				jj++;
 
 			int iii = ii;
@@ -177,7 +170,7 @@ double weight(double d)
 
 uchar cubicInterpolateUchar(const uchar * input,double d)
 {
-	int value = ((input[0] * weight(d + 1) + input[1] * weight(d) + input[2] * weight(1 - d) + input[3] * weight(2 - d)));
+	int value = ((input[0] * weight(d) + input[1] * weight(d-1) + input[2] * weight(2 - d) + input[3] * weight(3 - d)));
 	if (value > 255)
 		return 255;
 	else if (value < 0)
@@ -187,7 +180,7 @@ uchar cubicInterpolateUchar(const uchar * input,double d)
 
 char cubicInterpolateChar(const char * input, double d)
 {
-	int value = ((input[0] * weight(d + 1) + input[1] * weight(d) + input[2] * weight(1 - d) + input[3] * weight(2 - d)));
+	int value = ((input[0] * weight(d) + input[1] * weight(d-1) + input[2] * weight(2-d) + input[3] * weight(3 - d)));
 	if (value > 127)
 		return 127;
 	else if (value < -128)
@@ -212,6 +205,7 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 	/* Convert input image to YUV420 image */
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
+	/* Y buffer processing */
 	for(int i = 0; i < newYSize; i++)
 		for (int j = 0; j < newXSize; j++)
 		{
@@ -221,21 +215,52 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 			int ii = i / vScalingFactor;
 			int jj = j / hScalingFactor;
 
+			uchar funInput[4];
 			uchar cubicIntRes[4];
 			for (int m = 0; m < 4; m++)
 			{
-				int dif;
-				if(dif = ii - 1 + m - ySize > 0)
-					cubicIntRes[m] = cubicInterpolateUchar(Y_buff + (ii - 1 + m - dif)*xSize + jj - 1, dHorizontal);
-				else
-					cubicIntRes[m] = cubicInterpolateUchar(Y_buff + (ii - 1 + m)*xSize + jj - 1, dHorizontal);
-			}
+				int tmp = m;
+				if (ii + tmp == 0)
+					tmp++;
+				else if (ii + tmp > ySize - 1)
+					tmp = ySize - ii;
 
-			NEW_Y_buff[i*newXSize + j] = cubicInterpolateUchar(cubicIntRes, dVertical);
+				if (jj == 0)
+				{
+					funInput[0] = Y_buff[(ii-1+tmp)*xSize];
+					funInput[1] = Y_buff[(ii-1+tmp)*xSize];
+					funInput[2] = Y_buff[(ii - 1 + tmp)*xSize + 1];
+					funInput[3] = Y_buff[(ii - 1 + tmp)*xSize + 2];
+				}
+				else if (jj == xSize - 2)
+				{
+					funInput[0] = Y_buff[(ii-1+tmp)*xSize + jj - 1];
+					funInput[1] = Y_buff[(ii-1+tmp)*xSize + jj];
+					funInput[2] = Y_buff[(ii-1+tmp)*xSize + jj + 1];
+					funInput[3] = Y_buff[(ii-1+tmp)*xSize + jj + 1];
+				}
+				else if (jj == xSize - 1)
+				{
+					funInput[0] = Y_buff[(ii-1+tmp)*xSize + jj - 1];
+					funInput[1] = Y_buff[(ii-1+tmp)*xSize + jj];
+					funInput[2] = Y_buff[(ii-1+tmp)*xSize + jj];
+					funInput[3] = Y_buff[(ii-1+tmp)*xSize + jj];
+				}
+				else
+				{
+					funInput[0] = Y_buff[(ii-1+tmp)*xSize + jj - 1];
+					funInput[1] = Y_buff[(ii-1+tmp)*xSize + jj];
+					funInput[2] = Y_buff[(ii-1+tmp)*xSize + jj + 1];
+					funInput[3] = Y_buff[(ii-1+tmp)*xSize + jj + 2];
+				}
+				cubicIntRes[m] = cubicInterpolateUchar(funInput, dHorizontal + 1);
+			}
+			NEW_Y_buff[i*newXSize + j] = cubicInterpolateUchar(cubicIntRes, dVertical + 1);
 		}
 
+	/* U and V buffer processing */
 	for (int i = 0; i < newYSize/2; i++)
-		for (int j = 0; j < newXSize/2; j++)
+		for (int j = 0; j < newXSize / 2; j++)
 		{
 			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
 			double dHorizontal = j / hScalingFactor - floor(j / hScalingFactor);
@@ -243,30 +268,72 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 			int ii = i / vScalingFactor;
 			int jj = j / hScalingFactor;
 
-			char cubicIntRes[4];
+			char funInputU[4];
+			char funInputV[4];
+			char cubicIntResU[4];
+			char cubicIntResV[4];
 
 			for (int m = 0; m < 4; m++)
 			{
-				int dif;
-				if (dif = ii - 1 + m - ySize/2 > 0)
-					cubicIntRes[m] = cubicInterpolateChar(U_buff + (ii - 1 + m - dif)*xSize/2 + jj - 1, dHorizontal);
+				int tmp = m;
+
+				if (ii + tmp == 0)
+					tmp++;
+				else if (ii + tmp > ySize/2 - 1)
+					tmp = ySize/2 - ii;
+
+				if (jj == 0)
+				{
+					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2];
+					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2];
+					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + 1];
+					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + 2];
+					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2];
+					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2];
+					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + 1];
+					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + 2];
+				}
+				else if (jj == xSize / 2 - 2)
+				{
+					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
+					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
+					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
+					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
+					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
+					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
+				}
+				else if (jj == xSize / 2 - 1)
+				{
+					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
+					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
+					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
+				}
 				else
-					cubicIntRes[m] = cubicInterpolateChar(U_buff + (ii - 1 + m)*xSize/2 + jj - 1, dHorizontal);
+				{
+					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
+					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
+					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 2];
+					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
+					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
+					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
+					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 2];
+				}
+				cubicIntResU[m] = cubicInterpolateChar(funInputU, dHorizontal + 1);
+				cubicIntResV[m] = cubicInterpolateChar(funInputV, dHorizontal + 1);
 			}
 
-			NEW_U_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntRes, dVertical);
-
-			for (int m = 0; m < 4; m++)
-			{
-				int dif;
-				if (dif = ii - 1 + m - ySize / 2 > 0)
-					cubicIntRes[m] = cubicInterpolateChar(V_buff + (ii - 1 + m - dif)*xSize / 2 + jj - 1, dHorizontal);
-				else
-					cubicIntRes[m] = cubicInterpolateChar(V_buff + (ii - 1 + m)*xSize / 2 + jj - 1, dHorizontal);
-			}
-
-			NEW_V_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntRes, dVertical);
+			NEW_U_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntResU, dVertical + 1);
+			NEW_V_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntResV, dVertical + 1);
 		}
+
 	/* Convert YUV image back to RGB */
 	YUV420toRGB(NEW_Y_buff, NEW_U_buff, NEW_V_buff, newXSize, newYSize, output);
 
@@ -300,7 +367,7 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 			int ii = i*cos(PI*angle/180) + j*sin(PI*angle/180) - m*sin(PI*angle/180) - n*cos(PI*angle/180) + n;
 			int jj = j*cos(PI*angle/180) - i*sin(PI*angle/180) - m*cos(PI*angle/180) + n*sin(PI*angle/180) + m;
 
-			if (ii < 0 || ii > ySize || jj < 0 || jj > xSize)
+			if (ii < 0 || ii >= ySize || jj < 0 || jj >= xSize)
 				NEW_Y_buff[i*xSize + j] = 0;
 			else
 				NEW_Y_buff[i*xSize + j] = Y_buff[ii*xSize + jj];
@@ -312,15 +379,15 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 			int ii = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180)/2 - n*cos(PI*angle / 180)/2 + n/2;
 			int jj = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180)/2 + n*sin(PI*angle / 180)/2 + m/2;
 
-			if (ii < 0 || ii > ySize / 2 || jj < 0 || jj > xSize / 2)
+			if (ii < 0 || ii >= ySize / 2 || jj < 0 || jj >= xSize / 2)
 			{
 				NEW_U_buff[i*xSize / 2 + j] = 0;
 				NEW_V_buff[i*xSize / 2 + j] = 0;
 			}
 			else
 			{
-				NEW_U_buff[i*xSize / 2 + j] = U_buff[ii*xSize / 2 + jj];
-				NEW_V_buff[i*xSize / 2 + j] = V_buff[ii*xSize / 2 + jj];
+				NEW_U_buff[i*xSize / 2 + j] = U_buff[ii*xSize/2 + jj];
+				NEW_V_buff[i*xSize / 2 + j] = V_buff[ii*xSize/2 + jj];
 			}
 		}
 
@@ -354,13 +421,31 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 	for (int i = 0; i < ySize; i++)
 		for (int j = 0; j < xSize; j++)
 		{
+			double a = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) + n*sin(PI*angle / 180) + m -
+					floor(j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) + n*sin(PI*angle / 180) + m);
+
+			double b = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) - n*cos(PI*angle / 180) + n -
+				floor(i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) - n*cos(PI*angle / 180) + n);
+
 			int ii = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) - n*cos(PI*angle / 180) + n;
 			int jj = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) + n*sin(PI*angle / 180) + m;
 
-			if (ii < 0 || ii > ySize || jj < 0 || jj > xSize)
+			int iii = ii;
+			int jjj = jj;
+
+			if (iii < ySize - 1)
+				iii++;
+
+			if (jjj < xSize - 1)
+				jjj++;
+
+			if (ii < 0 || ii >= ySize || jj < 0 || jj >= xSize)
 				NEW_Y_buff[i*xSize + j] = 0;
 			else
-				NEW_Y_buff[i*xSize + j] = Y_buff[ii*xSize + jj];
+				NEW_Y_buff[i*xSize + j] = (1 - a)*(1 - b)*Y_buff[ii*xSize + jj] +
+				(1 - a)*b*Y_buff[iii*xSize + jj] +
+				a*(1 - b)*Y_buff[ii*xSize + jjj] +
+				a*b*Y_buff[iii*xSize + jjj];
 		}
 
 	for (int i = 0; i < ySize / 2; i++)
@@ -369,7 +454,7 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 			int ii = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) / 2 - n*cos(PI*angle / 180) / 2 + n / 2;
 			int jj = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) / 2 + n*sin(PI*angle / 180) / 2 + m / 2;
 
-			if (ii < 0 || ii > ySize / 2 || jj < 0 || jj > xSize / 2)
+			if (ii < 0 || ii >= ySize / 2 || jj < 0 || jj >= xSize / 2)
 			{
 				NEW_U_buff[i*xSize / 2 + j] = 0;
 				NEW_V_buff[i*xSize / 2 + j] = 0;
