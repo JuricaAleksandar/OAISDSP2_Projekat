@@ -229,8 +229,8 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 				{
 					funInput[0] = Y_buff[(ii-1+tmp)*xSize];
 					funInput[1] = Y_buff[(ii-1+tmp)*xSize];
-					funInput[2] = Y_buff[(ii - 1 + tmp)*xSize + 1];
-					funInput[3] = Y_buff[(ii - 1 + tmp)*xSize + 2];
+					funInput[2] = Y_buff[(ii-1+tmp)*xSize + 1];
+					funInput[3] = Y_buff[(ii-1+tmp)*xSize + 2];
 				}
 				else if (jj == xSize - 2)
 				{
@@ -288,6 +288,7 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2];
 					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + 1];
 					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + 2];
+
 					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2];
 					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2];
 					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + 1];
@@ -299,6 +300,7 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
 					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
 					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
+
 					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
 					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
 					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
@@ -310,6 +312,7 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
 					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
 					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
+
 					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
 					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
 					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
@@ -321,6 +324,7 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
 					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
 					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 2];
+
 					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
 					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
 					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
@@ -361,11 +365,13 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 	/* Convert input image to YUV420 image */
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
+	double angleRad = PI*angle / 180;
+
 	for (int i = 0; i < ySize; i++)
 		for (int j = 0; j < xSize; j++)
 		{
-			int ii = i*cos(PI*angle/180) + j*sin(PI*angle/180) - m*sin(PI*angle/180) - n*cos(PI*angle/180) + n;
-			int jj = j*cos(PI*angle/180) - i*sin(PI*angle/180) - m*cos(PI*angle/180) + n*sin(PI*angle/180) + m;
+			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n;
+			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m;
 
 			if (ii < 0 || ii >= ySize || jj < 0 || jj >= xSize)
 				NEW_Y_buff[i*xSize + j] = 0;
@@ -376,8 +382,8 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 	for (int i = 0; i < ySize/2; i++)
 		for (int j = 0; j < xSize/2; j++)
 		{
-			int ii = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180)/2 - n*cos(PI*angle / 180)/2 + n/2;
-			int jj = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180)/2 + n*sin(PI*angle / 180)/2 + m/2;
+			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad)/2 - n*cos(angleRad)/2 + n/2;
+			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad)/2 + n*sin(angleRad)/2 + m/2;
 
 			if (ii < 0 || ii >= ySize / 2 || jj < 0 || jj >= xSize / 2)
 			{
@@ -418,17 +424,19 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 	/* Convert input image to YUV420 image */
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
+	double angleRad = PI*angle / 180;
+
 	for (int i = 0; i < ySize; i++)
 		for (int j = 0; j < xSize; j++)
 		{
-			double a = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) + n*sin(PI*angle / 180) + m -
-					floor(j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) + n*sin(PI*angle / 180) + m);
+			double a = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m -
+					floor(j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m);
 
-			double b = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) - n*cos(PI*angle / 180) + n -
-				floor(i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) - n*cos(PI*angle / 180) + n);
+			double b = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n -
+				floor(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n);
 
-			int ii = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) - n*cos(PI*angle / 180) + n;
-			int jj = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) + n*sin(PI*angle / 180) + m;
+			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n;
+			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m;
 
 			int iii = ii;
 			int jjj = jj;
@@ -451,8 +459,8 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 	for (int i = 0; i < ySize / 2; i++)
 		for (int j = 0; j < xSize / 2; j++)
 		{
-			int ii = i*cos(PI*angle / 180) + j*sin(PI*angle / 180) - m*sin(PI*angle / 180) / 2 - n*cos(PI*angle / 180) / 2 + n / 2;
-			int jj = j*cos(PI*angle / 180) - i*sin(PI*angle / 180) - m*cos(PI*angle / 180) / 2 + n*sin(PI*angle / 180) / 2 + m / 2;
+			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) / 2 - n*cos(angleRad) / 2 + n / 2;
+			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) / 2 + n*sin(angleRad) / 2 + m / 2;
 
 			if (ii < 0 || ii >= ySize / 2 || jj < 0 || jj >= xSize / 2)
 			{
