@@ -490,11 +490,11 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 			int ii = round(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n);
 			int jj = round(j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m);
 
-			if (ii == ySize)
+			/*if (ii == ySize)
 				ii--;
 
 			if (jj == xSize)
-				jj--;
+				jj--;*/
 
 			int iii = ii;
 			int jjj = jj;
@@ -517,14 +517,29 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 	for (int i = 0; i < ySize / 2; i++)
 		for (int j = 0; j < xSize / 2; j++)
 		{
+			double a = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad)/2.0 + n*sin(angleRad)/2.0 + m/2.0 -
+				floor(j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) / 2.0 + n*sin(angleRad) / 2.0 + m / 2.0);
+
+			double b = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad)/2.0 - n*cos(angleRad)/2.0 + n/2.0 -
+				floor(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) / 2.0 - n*cos(angleRad) / 2.0 + n / 2.0);
+
 			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) / 2 - n*cos(angleRad) / 2 + n / 2;
 			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) / 2 + n*sin(angleRad) / 2 + m / 2;
 
-			if (ii == ySize/2)
+			/*if (ii == ySize/2)
 				ii--;
 
 			if (jj == xSize/2)
-				jj--;
+				jj--;*/
+
+			int iii = ii;
+			int jjj = jj;
+
+			if (iii < ySize/2 - 1)
+				iii++;
+
+			if (jjj < xSize/2 - 1)
+				jjj++;
 
 			if (ii < 0 || ii >= ySize / 2 || jj < 0 || jj >= xSize / 2)
 			{
@@ -533,8 +548,14 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 			}
 			else
 			{
-				NEW_U_buff[i*xSize / 2 + j] = U_buff[ii*xSize / 2 + jj];
-				NEW_V_buff[i*xSize / 2 + j] = V_buff[ii*xSize / 2 + jj];
+				NEW_U_buff[i*xSize / 2 + j] = (1 - a)*(1 - b)*U_buff[ii*xSize/2 + jj] +
+					(1 - a)*b*U_buff[iii*xSize/2 + jj] +
+					a*(1 - b)*U_buff[ii*xSize/2 + jjj] +
+					a*b*U_buff[iii*xSize/2 + jjj];
+				NEW_V_buff[i*xSize / 2 + j] = (1 - a)*(1 - b)*V_buff[ii*xSize/2 + jj] +
+					(1 - a)*b*V_buff[iii*xSize/2 + jj] +
+					a*(1 - b)*V_buff[ii*xSize/2 + jjj] +
+					a*b*V_buff[iii*xSize/2 + jjj];
 			}
 		}
 

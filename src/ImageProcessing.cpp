@@ -4,7 +4,7 @@
 
 #include <QDebug>
 
-int upto(int x, int y) {
+int roundup(int x, int y) {
 	return (x + y - 1) & ~(y - 1);
 }
 
@@ -23,8 +23,8 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 
 		/* Create empty output image */
 
-		int NEW_X_SIZE = upto(X_SIZE * params[1], 4);
-		int NEW_Y_SIZE = upto(X_SIZE * params[0], 4);
+		int NEW_X_SIZE = roundup(X_SIZE * params[1], 4);
+		int NEW_Y_SIZE = roundup(X_SIZE * params[0], 4);
 
 		*outImgs = *(new QImage(NEW_X_SIZE, NEW_Y_SIZE, inImgs->format()));
 
@@ -38,8 +38,8 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 
 		/* Create empty output image */
 
-		int NEW_X_SIZE = upto(X_SIZE * params[1], 4);
-		int NEW_Y_SIZE = upto(X_SIZE * params[0], 4);
+		int NEW_X_SIZE = roundup(X_SIZE * params[1], 4);
+		int NEW_Y_SIZE = roundup(X_SIZE * params[0], 4);
 
 		*outImgs = *(new QImage(NEW_X_SIZE, NEW_Y_SIZE, inImgs->format()));
 
@@ -51,8 +51,8 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 		/* Vertical scale factor is params[0] */
 		/* Horizontal scale factor is params[1] */
 
-		int NEW_X_SIZE = upto(X_SIZE * params[1], 4);
-		int NEW_Y_SIZE = upto(X_SIZE * params[0], 4);
+		int NEW_X_SIZE = roundup(X_SIZE * params[1], 4);
+		int NEW_Y_SIZE = roundup(X_SIZE * params[0], 4);
 
 		*outImgs = *(new QImage(NEW_X_SIZE, NEW_Y_SIZE, inImgs->format()));
 
@@ -88,4 +88,3 @@ void imageProcessingFun(const QString& progName, QImage* const outImgs, const QI
 	}
 
 }
-
