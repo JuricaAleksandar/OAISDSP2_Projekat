@@ -189,7 +189,7 @@ char cubicInterpolateChar(const char * input, double d)
 	return (char)value;
 }
 
-void processing(int xSize,int ySize,int newXSize,int newYSize,double vScalingFactor,double hScalingFactor,char * input,char * output)
+void processingUV(int xSize,int ySize,int newXSize,int newYSize,double vScalingFactor,double hScalingFactor,char * input,char * output)
 {
 	for (int i = 0; i < newYSize; i++)
 		for (int j = 0; j < newXSize; j++)
@@ -245,6 +245,62 @@ void processing(int xSize,int ySize,int newXSize,int newYSize,double vScalingFac
 		}
 }
 
+void processingY(int xSize, int ySize, int newXSize, int newYSize, double vScalingFactor, double hScalingFactor, uchar * input, uchar * output)
+{
+	for (int i = 0; i < newYSize/2; i++)
+		for (int j = 0; j < newXSize; j++)
+		{
+			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
+			double dHorizontal = j / hScalingFactor - floor(j / hScalingFactor);
+
+			int ii = i / vScalingFactor;
+			int jj = j / hScalingFactor;
+
+			uchar funInput[4];
+			uchar cubicIntRes[4];
+
+			for (int m = 0; m < 4; m++)
+			{
+				int tmp = m;
+				if (ii + tmp == 0)
+					tmp++;
+				else if (ii + tmp > ySize - 1)
+					tmp = ySize - ii;
+
+				if (jj == 0)
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize];
+					funInput[1] = input[(ii - 1 + tmp)*xSize];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + 1];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + 2];
+				}
+				else if (jj == xSize - 2)
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + jj + 1];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + jj + 1];
+				}
+				else if (jj == xSize - 1)
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + jj];
+				}
+				else
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + jj + 1];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + jj + 2];
+				}
+				cubicIntRes[m] = cubicInterpolateUchar(funInput, dHorizontal + 1);
+			}
+			output[i*newXSize + j] = cubicInterpolateUchar(cubicIntRes, dVertical + 1);
+		}
+}
+
 void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[], int newXSize, int newYSize)
 {
 	/* Create buffers for YUV image */
@@ -262,11 +318,11 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
 	/* U and V buffer processing */
-	std::thread uProcessingThread(processing,xSize/2,ySize/2,newXSize/2,newYSize/2,vScalingFactor,hScalingFactor,U_buff,NEW_U_buff);
-	std::thread vProcessingThread(processing, xSize/2, ySize/2, newXSize/2, newYSize/2, vScalingFactor, hScalingFactor, V_buff, NEW_V_buff);
-
+	std::thread uProcessingThread(processingUV, xSize/2,ySize/2,newXSize/2,newYSize/2,vScalingFactor,hScalingFactor,U_buff,NEW_U_buff);
+	std::thread vProcessingThread(processingUV, xSize/2, ySize/2, newXSize/2, newYSize/2, vScalingFactor, hScalingFactor, V_buff, NEW_V_buff);
+	std::thread halfYProcessingThread(processingY, xSize, ySize, newXSize, newYSize, vScalingFactor, hScalingFactor, Y_buff, NEW_Y_buff);
 	/* Y buffer processing */
-	for (int i = 0; i < newYSize; i++)
+	for (int i = newYSize / 2; i < newYSize; i++)
 		for (int j = 0; j < newXSize; j++)
 		{
 			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
@@ -320,6 +376,7 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 
 	uProcessingThread.join();
 	vProcessingThread.join();
+	halfYProcessingThread.join();
 
 	/* Convert YUV image back to RGB */
 	YUV420toRGB(NEW_Y_buff, NEW_U_buff, NEW_V_buff, newXSize, newYSize, output);
@@ -353,8 +410,14 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 	for (int i = 0; i < ySize; i++)
 		for (int j = 0; j < xSize; j++)
 		{
-			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n;
-			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m;
+			int ii = round(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n);
+			int jj = round(j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m);
+
+			if (ii == ySize)
+				ii--;
+
+			if (jj == xSize)
+				jj--;
 
 			if (ii < 0 || ii >= ySize || jj < 0 || jj >= xSize)
 				NEW_Y_buff[i*xSize + j] = 0;
@@ -367,6 +430,12 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 		{
 			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad)/2 - n*cos(angleRad)/2 + n/2;
 			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad)/2 + n*sin(angleRad)/2 + m/2;
+
+			if (ii == ySize/2)
+				ii--;
+
+			if (jj == xSize/2)
+				jj--;
 
 			if (ii < 0 || ii >= ySize / 2 || jj < 0 || jj >= xSize / 2)
 			{
@@ -418,8 +487,14 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 			double b = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n -
 				floor(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n);
 
-			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n;
-			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m;
+			int ii = round(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n);
+			int jj = round(j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m);
+
+			if (ii == ySize)
+				ii--;
+
+			if (jj == xSize)
+				jj--;
 
 			int iii = ii;
 			int jjj = jj;
@@ -444,6 +519,12 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 		{
 			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) / 2 - n*cos(angleRad) / 2 + n / 2;
 			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) / 2 + n*sin(angleRad) / 2 + m / 2;
+
+			if (ii == ySize/2)
+				ii--;
+
+			if (jj == xSize/2)
+				jj--;
 
 			if (ii < 0 || ii >= ySize / 2 || jj < 0 || jj >= xSize / 2)
 			{
