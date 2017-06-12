@@ -1,6 +1,7 @@
 #include "ImageInterpolation.h"
 #include "ColorSpaces.h"
 #include <math.h>
+#include <thread>
 
 #define PI 3.14159265358979323846
 
@@ -188,6 +189,62 @@ char cubicInterpolateChar(const char * input, double d)
 	return (char)value;
 }
 
+void processing(int xSize,int ySize,int newXSize,int newYSize,double vScalingFactor,double hScalingFactor,char * input,char * output)
+{
+	for (int i = 0; i < newYSize; i++)
+		for (int j = 0; j < newXSize; j++)
+		{
+			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
+			double dHorizontal = j / hScalingFactor - floor(j / hScalingFactor);
+
+			int ii = i / vScalingFactor;
+			int jj = j / hScalingFactor;
+
+			char funInput[4];
+			char cubicIntRes[4];
+
+			for (int m = 0; m < 4; m++)
+			{
+				int tmp = m;
+				if (ii + tmp == 0)
+					tmp++;
+				else if (ii + tmp > ySize - 1)
+					tmp = ySize - ii;
+
+				if (jj == 0)
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize];
+					funInput[1] = input[(ii - 1 + tmp)*xSize];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + 1];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + 2];
+				}
+				else if (jj == xSize - 2)
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + jj + 1];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + jj + 1];
+				}
+				else if (jj == xSize - 1)
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + jj];
+				}
+				else
+				{
+					funInput[0] = input[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = input[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = input[(ii - 1 + tmp)*xSize + jj + 1];
+					funInput[3] = input[(ii - 1 + tmp)*xSize + jj + 2];
+				}
+				cubicIntRes[m] = cubicInterpolateChar(funInput, dHorizontal + 1);
+			}
+			output[i*newXSize + j] = cubicInterpolateChar(cubicIntRes, dVertical + 1);
+		}
+}
+
 void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[], int newXSize, int newYSize)
 {
 	/* Create buffers for YUV image */
@@ -201,12 +258,15 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 
 	double hScalingFactor = (double)newXSize / xSize;
 	double vScalingFactor = (double)newYSize / ySize;
-
 	/* Convert input image to YUV420 image */
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
+	/* U and V buffer processing */
+	std::thread uProcessingThread(processing,xSize/2,ySize/2,newXSize/2,newYSize/2,vScalingFactor,hScalingFactor,U_buff,NEW_U_buff);
+	std::thread vProcessingThread(processing, xSize/2, ySize/2, newXSize/2, newYSize/2, vScalingFactor, hScalingFactor, V_buff, NEW_V_buff);
+
 	/* Y buffer processing */
-	for(int i = 0; i < newYSize; i++)
+	for (int i = 0; i < newYSize; i++)
 		for (int j = 0; j < newXSize; j++)
 		{
 			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
@@ -227,116 +287,39 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 
 				if (jj == 0)
 				{
-					funInput[0] = Y_buff[(ii-1+tmp)*xSize];
-					funInput[1] = Y_buff[(ii-1+tmp)*xSize];
-					funInput[2] = Y_buff[(ii-1+tmp)*xSize + 1];
-					funInput[3] = Y_buff[(ii-1+tmp)*xSize + 2];
+					funInput[0] = Y_buff[(ii - 1 + tmp)*xSize];
+					funInput[1] = Y_buff[(ii - 1 + tmp)*xSize];
+					funInput[2] = Y_buff[(ii - 1 + tmp)*xSize + 1];
+					funInput[3] = Y_buff[(ii - 1 + tmp)*xSize + 2];
 				}
 				else if (jj == xSize - 2)
 				{
-					funInput[0] = Y_buff[(ii-1+tmp)*xSize + jj - 1];
-					funInput[1] = Y_buff[(ii-1+tmp)*xSize + jj];
-					funInput[2] = Y_buff[(ii-1+tmp)*xSize + jj + 1];
-					funInput[3] = Y_buff[(ii-1+tmp)*xSize + jj + 1];
+					funInput[0] = Y_buff[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = Y_buff[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = Y_buff[(ii - 1 + tmp)*xSize + jj + 1];
+					funInput[3] = Y_buff[(ii - 1 + tmp)*xSize + jj + 1];
 				}
 				else if (jj == xSize - 1)
 				{
-					funInput[0] = Y_buff[(ii-1+tmp)*xSize + jj - 1];
-					funInput[1] = Y_buff[(ii-1+tmp)*xSize + jj];
-					funInput[2] = Y_buff[(ii-1+tmp)*xSize + jj];
-					funInput[3] = Y_buff[(ii-1+tmp)*xSize + jj];
+					funInput[0] = Y_buff[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = Y_buff[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = Y_buff[(ii - 1 + tmp)*xSize + jj];
+					funInput[3] = Y_buff[(ii - 1 + tmp)*xSize + jj];
 				}
 				else
 				{
-					funInput[0] = Y_buff[(ii-1+tmp)*xSize + jj - 1];
-					funInput[1] = Y_buff[(ii-1+tmp)*xSize + jj];
-					funInput[2] = Y_buff[(ii-1+tmp)*xSize + jj + 1];
-					funInput[3] = Y_buff[(ii-1+tmp)*xSize + jj + 2];
+					funInput[0] = Y_buff[(ii - 1 + tmp)*xSize + jj - 1];
+					funInput[1] = Y_buff[(ii - 1 + tmp)*xSize + jj];
+					funInput[2] = Y_buff[(ii - 1 + tmp)*xSize + jj + 1];
+					funInput[3] = Y_buff[(ii - 1 + tmp)*xSize + jj + 2];
 				}
 				cubicIntRes[m] = cubicInterpolateUchar(funInput, dHorizontal + 1);
 			}
 			NEW_Y_buff[i*newXSize + j] = cubicInterpolateUchar(cubicIntRes, dVertical + 1);
 		}
 
-	/* U and V buffer processing */
-	for (int i = 0; i < newYSize/2; i++)
-		for (int j = 0; j < newXSize / 2; j++)
-		{
-			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
-			double dHorizontal = j / hScalingFactor - floor(j / hScalingFactor);
-
-			int ii = i / vScalingFactor;
-			int jj = j / hScalingFactor;
-
-			char funInputU[4];
-			char funInputV[4];
-			char cubicIntResU[4];
-			char cubicIntResV[4];
-
-			for (int m = 0; m < 4; m++)
-			{
-				int tmp = m;
-
-				if (ii + tmp == 0)
-					tmp++;
-				else if (ii + tmp > ySize/2 - 1)
-					tmp = ySize/2 - ii;
-
-				if (jj == 0)
-				{
-					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2];
-					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2];
-					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + 1];
-					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + 2];
-
-					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2];
-					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2];
-					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + 1];
-					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + 2];
-				}
-				else if (jj == xSize / 2 - 2)
-				{
-					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
-					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
-					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
-
-					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
-					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
-					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
-				}
-				else if (jj == xSize / 2 - 1)
-				{
-					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
-					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
-
-					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
-					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
-				}
-				else
-				{
-					funInputU[0] = U_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
-					funInputU[1] = U_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputU[2] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
-					funInputU[3] = U_buff[(ii-1+tmp)*xSize / 2 + jj + 2];
-
-					funInputV[0] = V_buff[(ii-1+tmp)*xSize / 2 + jj - 1];
-					funInputV[1] = V_buff[(ii-1+tmp)*xSize / 2 + jj];
-					funInputV[2] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 1];
-					funInputV[3] = V_buff[(ii-1+tmp)*xSize / 2 + jj + 2];
-				}
-				cubicIntResU[m] = cubicInterpolateChar(funInputU, dHorizontal + 1);
-				cubicIntResV[m] = cubicInterpolateChar(funInputV, dHorizontal + 1);
-			}
-
-			NEW_U_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntResU, dVertical + 1);
-			NEW_V_buff[i*newXSize / 2 + j] = cubicInterpolateChar(cubicIntResV, dVertical + 1);
-		}
+	uProcessingThread.join();
+	vProcessingThread.join();
 
 	/* Convert YUV image back to RGB */
 	YUV420toRGB(NEW_Y_buff, NEW_U_buff, NEW_V_buff, newXSize, newYSize, output);
