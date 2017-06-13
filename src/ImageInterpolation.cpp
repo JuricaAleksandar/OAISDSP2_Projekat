@@ -1,9 +1,8 @@
+#define _USE_MATH_DEFINES
 #include "ImageInterpolation.h"
 #include "ColorSpaces.h"
-#include <math.h>
 #include <thread>
-
-#define PI 3.14159265358979323846
+#include <math.h>
 
 void sampleAndHold(const uchar input[], int xSize, int ySize, uchar output[], int newXSize, int newYSize)
 {
@@ -89,14 +88,8 @@ void bilinearInterpolate(const uchar input[], int xSize, int ySize, uchar output
 			double a = j / hScalingFactor - floor(j / hScalingFactor);
 			double b = i / vScalingFactor - floor(i / vScalingFactor);
 
-			int ii = floor((i - 1) / vScalingFactor);
-			int jj = floor((j - 1) / hScalingFactor);
-
-			if (ii < ySize - 1 && b == 0)
-				ii++;
-
-			if (jj < xSize - 1 && a == 0)
-				jj++;
+			int ii = i / vScalingFactor;
+			int jj = j / hScalingFactor;
 
 			int iii = ii;
 			int jjj = jj;
@@ -118,14 +111,8 @@ void bilinearInterpolate(const uchar input[], int xSize, int ySize, uchar output
 			uchar a = j / hScalingFactor - floor(j / hScalingFactor);
 			uchar b = i / vScalingFactor - floor(i / vScalingFactor);
 
-			int ii = floor((i - 1) / vScalingFactor);
-			int jj = floor((j - 1) / hScalingFactor);
-
-			if (ii < ySize/2 - 1 && b == 0)
-				ii++;
-
-			if (jj < xSize/2 - 1 && a == 0)
-				jj++;
+			int ii = i / vScalingFactor;
+			int jj = j / hScalingFactor;
 
 			int iii = ii;
 			int jjj = jj;
@@ -247,7 +234,7 @@ void processingUV(int xSize,int ySize,int newXSize,int newYSize,double vScalingF
 
 void processingY(int xSize, int ySize, int newXSize, int newYSize, double vScalingFactor, double hScalingFactor, uchar * input, uchar * output)
 {
-	for (int i = 0; i < newYSize/2; i++)
+	for (int i = newYSize/2; i < newYSize; i++)
 		for (int j = 0; j < newXSize; j++)
 		{
 			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
@@ -317,12 +304,13 @@ void bicubicInterpolate(const uchar input[], int xSize, int ySize, uchar output[
 	/* Convert input image to YUV420 image */
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
-	/* U and V buffer processing */
+	/* U,V and first half of Y buffer processing */
 	std::thread uProcessingThread(processingUV, xSize/2,ySize/2,newXSize/2,newYSize/2,vScalingFactor,hScalingFactor,U_buff,NEW_U_buff);
 	std::thread vProcessingThread(processingUV, xSize/2, ySize/2, newXSize/2, newYSize/2, vScalingFactor, hScalingFactor, V_buff, NEW_V_buff);
 	std::thread halfYProcessingThread(processingY, xSize, ySize, newXSize, newYSize, vScalingFactor, hScalingFactor, Y_buff, NEW_Y_buff);
-	/* Y buffer processing */
-	for (int i = newYSize / 2; i < newYSize; i++)
+	
+	/* Second half of Y buffer processing */
+	for (int i = 0; i < newYSize /2; i++)
 		for (int j = 0; j < newXSize; j++)
 		{
 			double dVertical = i / vScalingFactor - floor(i / vScalingFactor);
@@ -405,7 +393,7 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 	/* Convert input image to YUV420 image */
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
-	double angleRad = PI*angle / 180;
+	double angleRad = M_PI*angle / 180;
 
 	for (int i = 0; i < ySize; i++)
 		for (int j = 0; j < xSize; j++)
@@ -428,8 +416,8 @@ void imageRotate(const uchar input[], int xSize, int ySize, uchar output[], int 
 	for (int i = 0; i < ySize/2; i++)
 		for (int j = 0; j < xSize/2; j++)
 		{
-			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad)/2 - n*cos(angleRad)/2 + n/2;
-			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad)/2 + n*sin(angleRad)/2 + m/2;
+			int ii = round(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad)/2 - n*cos(angleRad)/2 + n/2);
+			int jj = round(j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad)/2 + n*sin(angleRad)/2 + m/2);
 
 			if (ii == ySize/2)
 				ii--;
@@ -476,7 +464,7 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 	/* Convert input image to YUV420 image */
 	RGBtoYUV420(input, xSize, ySize, Y_buff, U_buff, V_buff);
 
-	double angleRad = PI*angle / 180;
+	double angleRad = M_PI*angle / 180;
 
 	for (int i = 0; i < ySize; i++)
 		for (int j = 0; j < xSize; j++)
@@ -487,14 +475,14 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 			double b = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n -
 				floor(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n);
 
-			int ii = round(i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n);
-			int jj = round(j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m);
+			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) - n*cos(angleRad) + n;
+			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) + n*sin(angleRad) + m;
 
-			/*if (ii == ySize)
+			if (ii == ySize)
 				ii--;
 
 			if (jj == xSize)
-				jj--;*/
+				jj--;
 
 			int iii = ii;
 			int jjj = jj;
@@ -526,11 +514,11 @@ void imageRotateBilinear(const uchar input[], int xSize, int ySize, uchar output
 			int ii = i*cos(angleRad) + j*sin(angleRad) - m*sin(angleRad) / 2 - n*cos(angleRad) / 2 + n / 2;
 			int jj = j*cos(angleRad) - i*sin(angleRad) - m*cos(angleRad) / 2 + n*sin(angleRad) / 2 + m / 2;
 
-			/*if (ii == ySize/2)
+			if (ii == ySize/2)
 				ii--;
 
 			if (jj == xSize/2)
-				jj--;*/
+				jj--;
 
 			int iii = ii;
 			int jjj = jj;
